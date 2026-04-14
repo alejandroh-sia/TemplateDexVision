@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DexVision Analytics</title>
+  <style>
+    :root { --panel-alpha: 0.72; }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background-color: #111;
+      color: #fff;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* === BACKGROUND (camera feed) === */
+    #bg {
+      position: absolute;
+      inset: 0;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      z-index: 0;
+    }
+
+    /* === MAIN LAYOUT === */
+    #layout {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+      display: -webkit-flex;
+      display: flex;
+      -webkit-flex-direction: column;
+      flex-direction: column;
+    }
+
+    /* ===================== TOP BAR ===================== */
+    #top-bar {
+      display: -webkit-flex;
+      display: flex;
+      -webkit-align-items: flex-start;
+      align-items: flex-start;
+    }
+
+    /* System stats */
+    #sys-stats {
+      display: none;
+    }
+    .ss-row { display: -webkit-flex; display: flex; gap: 6px; }
+    .ss-lbl { color: #aaa; white-space: nowrap; }
+    .ss-val { color: #fff; font-weight: 500; }
+    .ss-title { color: #fff; margin-top: 6px; margin-bottom: 1px; }
+    .ss-sub { font-size: 11px; color: #888; }
+
+    /* Zone info */
+    #zone-area {
+      -webkit-flex: 1;
+      flex: 1;
+      display: -webkit-flex;
+      display: flex;
+      -webkit-flex-direction: column;
+      flex-direction: column;
+      -webkit-align-items: center;
+      align-items: center;
+      padding: 10px 12px;
+      gap: 7px;
+    }
+
+    .zone-label {
+      background: #c62828;
+      padding: 3px 16px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .zone-counts-row {
+      display: -webkit-flex;
+      display: flex;
+      -webkit-align-items: center;
+      align-items: center;
+      gap: 5px;
+      -webkit-flex-wrap: wrap;
+      flex-wrap: wrap;
+      -webkit-justify-content: center;
+      justify-content: center;
+    }
+
+    .zone-total { font-size: 13px; font-weight: 700; margin-right: 4px; }
+
+    .gender-badge {
+      display: -webkit-flex;
+      display: flex;
+      -webkit-align-items: center;
+      align-items: center;
+      gap: 4px;
+      background: rgba(0,0,0,0.55);
+      border: 1px solid rgba(255,255,255,0.25);
+      padding: 2px 8px;
+      font-size: 12px;
+    }
+
+    /* Logo */
+    #logo {
+      padding: 8px 14px;
+      font-size: 26px;
+      font-weight: 800;
+      -webkit-flex-shrink: 0;
+      flex-shrink: 0;
+      text-shadow: 1px 1px 6px rgba(0,0,0,0.8);
+    }
+    #logo .v { color: #4CAF50; }
+
+    /* ===================== MIDDLE ===================== */
+    #mid { -webkit-flex: 1; flex: 1; }
+
+    /* ===================== BOTTOM BAR ===================== */
+    #bottom-bar {
+      background: rgba(0,0,0,var(--panel-alpha));
+      display: -webkit-flex;
+      display: flex;
+      -webkit-flex-direction: column;
+      flex-direction: column;
+    }
+
+    #bb-row1 {
+      display: -webkit-flex;
+      display: flex;
+      -webkit-align-items: stretch;
+      align-items: stretch;
+      padding: 8px 12px 6px;
+      gap: 0;
+    }
+
+    #bb-row2 {
+      display: -webkit-flex;
+      display: flex;
+      -webkit-align-items: center;
+      align-items: center;
+      padding: 4px 12px 8px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      gap: 0;
+    }
+
+    .bar-sep {
+      width: 1px;
+      background: rgba(255,255,255,0.15);
+      margin: 0 12px;
+      -webkit-align-self: stretch;
+      align-self: stretch;
+    }
+
+    /* Row 1 — Gender summary */
+    #summary-left {
+      display: -webkit-flex;
+      display: flex;
+      -webkit-align-items: center;
+      align-items: center;
+      gap: 10px;
+      -webkit-flex-shrink: 0;
+      flex-shrink: 0;
+    }
+
+    .sum-item {
+      display: -webkit-flex;
+      display: flex;
+      -webkit-flex-direction: column;
+      flex-direction: column;
+      -webkit-align-items: center;
+      align-items: center;
+      min-width: 38px;
+    }
+    .sum-icon { font-size: 20px; margin-bottom: 2px; }
+    .sum-cur  { color: #4CAF50; font-weight: 700; font-size: 16px; line-height: 1; }
+    .sum-acc  { color: #bbb; font-size: 12px; }
+    .sum-lbl  { color: #777; font-size: 10px; text-transform: uppercase; margin-top: 1px; }
+
+    .sum-vsep {
+      width: 1px;
+      background: rgba(255,255,255,0.12);
+      -webkit-align-self: stretch;
+      align-self: stretch;
+      margin: 0 4px;
+    }
+
+    /* Row 1 — Age groups */
+    #age-grid {
+      -webkit-flex: 1;
+      flex: 1;
+      display: -webkit-flex;
+      display: flex;
+      -webkit-align-items: flex-start;
+      align-items: flex-start;
+      gap: 4px;
+      overflow: hidden;
+    }
+
+    .age-col {
+      display: -webkit-flex;
+      display: flex;
+      -webkit-flex-direction: column;
+      flex-direction: column;
+      -webkit-align-items: center;
+      align-items: center;
+      -webkit-flex: 1;
+      flex: 1;
+    }
+    .age-col-label {
+      color: #4CAF50;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 3px;
+      white-space: nowrap;
+    }
+    .age-row {
+      display: -webkit-flex;
+      display: flex;
+      -webkit-align-items: center;
+      align-items: center;
+      gap: 2px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .age-row .r-icon { color: #aaa; width: 12px; text-align: center; font-size: 11px; }
+    .val-nz { color: #4CAF50; }
+    .val-zr { color: #888; }
+
+    /* Row 2 — Attention */
+    #attention-section {
+      display: -webkit-flex;
+      display: flex;
+      -webkit-align-items: center;
+      align-items: center;
+      gap: 8px;
+      -webkit-flex-shrink: 0;
+      flex-shrink: 0;
+    }
+    .attn-eye  { font-size: 18px; color: #aaa; }
+    .attn-item { display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column; -webkit-align-items: center; align-items: center; min-width: 34px; }
+    .attn-lbl  { color: #aaa; font-size: 13px; margin-bottom: 2px; }
+    .attn-cur  { color: #4CAF50; font-weight: 700; font-size: 13px; line-height: 1; }
+    .attn-acc  { color: #bbb; font-size: 11px; }
+
+    /* Row 2 — Crossings */
+    #crossings-section {
+      display: -webkit-flex;
+      display: flex;
+      -webkit-align-items: center;
+      align-items: center;
+      gap: 14px;
+      -webkit-flex: 1;
+      flex: 1;
+    }
+
+    .cross-block {
+      display: -webkit-flex;
+      display: flex;
+      -webkit-flex-direction: column;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .cross-zone-name {
+      color: #4CAF50;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .cross-line {
+      display: -webkit-flex;
+      display: flex;
+      -webkit-align-items: center;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+    }
+
+    .cross-line-name { color: #ccc; white-space: nowrap; }
+    .cross-in   { color: #4CAF50; font-weight: 600; }
+    .cross-out  { color: #ef5350; font-weight: 600; }
+    .cross-arrow { color: #666; font-size: 11px; }
+
+    /* ===================== ZONES PANEL ===================== */
+    #zones-panel {
+      position: fixed;
+      background: rgba(10,14,20,var(--panel-alpha));
+      border: 1px solid rgba(76,175,80,0.35);
+      border-radius: 8px;
+      padding: 10px 12px;
+      min-width: 170px;
+      max-width: 240px;
+      z-index: 50;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+    .zp-title { color: #4CAF50; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .zp-zone  { margin-bottom: 8px; }
+    .zp-zone-name { color: #ddd; font-size: 12px; font-weight: 600; margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 3px; }
+    .zp-line  { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 2px 0; }
+    .zp-line-name { color: #aaa; flex: 1; }
+    .zp-arrow { color: #4CAF50; font-size: 11px; }
+    .zp-count { color: #eee; font-weight: 600; min-width: 28px; text-align: right; }
+    .zp-count-neg { color: #bbb; }
+    .zp-presence  { display: flex; gap: 6px; margin: 4px 0 6px; flex-wrap: wrap; }
+    .zp-pres-item { display: flex; flex-direction: column; align-items: center; min-width: 30px; }
+    .zp-pres-icon { font-size: 13px; color: #aaa; }
+    .zp-pres-cur  { color: #4CAF50; font-weight: 700; font-size: 13px; line-height: 1.1; }
+    .zp-pres-acc  { color: #bbb; font-size: 11px; }
+    .zp-lines-title { color: #666; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; margin: 4px 0 2px; }
+
+    /* Zone info in row2 */
+    #zone-info { display: flex; flex-direction: column; justify-content: center; flex-shrink: 0; padding: 0 4px; }
+    .zi-name   { color: #4CAF50; font-size: 11px; font-weight: 700; margin-bottom: 3px; }
+    .zi-counts { display: flex; gap: 8px; }
+    .zi-item   { display: flex; flex-direction: column; align-items: center; min-width: 28px; }
+    .zi-icon   { font-size: 14px; color: #aaa; margin-bottom: 1px; }
+
+    /* ===================== GEAR BUTTON ===================== */
+    #gear-btn {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      width: 28px;
+      height: 28px;
+      background: rgba(10,10,10,0.65);
+      border: 1px solid rgba(255,255,255,0.18);
+      color: rgba(255,255,255,0.45);
+      font-size: 15px;
+      cursor: pointer;
+      display: -webkit-flex;
+      display: flex;
+      -webkit-align-items: center;
+      align-items: center;
+      -webkit-justify-content: center;
+      justify-content: center;
+      border-radius: 50%;
+      z-index: 500;
+      -webkit-transition: all 0.15s;
+      transition: all 0.15s;
+    }
+    #gear-btn:hover { background: rgba(60,60,60,0.9); color: #fff; border-color: rgba(255,255,255,0.4); }
+
+    /* ===================== CONFIG PANEL ===================== */
+    #cfg-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 600;
+    }
+    #cfg-overlay.open { display: block; }
+
+    #cfg-panel {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      -webkit-transform: translate(-50%, -50%);
+      transform: translate(-50%, -50%);
+      background: #1c1c1c;
+      border: 1px solid #3a3a3a;
+      padding: 22px 24px;
+      z-index: 700;
+      min-width: 340px;
+    }
+    #cfg-panel.open { display: block; }
+
+    .cfg-title { font-size: 15px; font-weight: 700; color: #4CAF50; margin-bottom: 18px; }
+    .cfg-field { margin-bottom: 14px; }
+    .cfg-field label {
+      display: block; color: #aaa; font-size: 11px;
+      margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .cfg-field input {
+      width: 100%; background: #2a2a2a; border: 1px solid #444;
+      color: #fff; padding: 7px 10px; font-size: 13px; outline: none;
+    }
+    .cfg-field input:focus { border-color: #4CAF50; }
+    .cfg-hint { font-size: 10px; color: #555; margin-top: 3px; }
+
+    .cfg-actions { display: -webkit-flex; display: flex; gap: 8px; margin-top: 20px; }
+
+    .btn-save {
+      background: #4CAF50; color: #000; border: none;
+      padding: 8px 18px; font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .btn-save:hover { background: #43A047; }
+    .btn-cancel {
+      background: #333; color: #ccc; border: none;
+      padding: 8px 16px; font-size: 13px; cursor: pointer;
+    }
+    .btn-cancel:hover { background: #3d3d3d; }
+
+    /* ===================== STATUS DOT ===================== */
+    #conn-dot {
+      position: fixed; top: 7px; right: 7px;
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #444; z-index: 400;
+      -webkit-transition: background 0.3s; transition: background 0.3s;
+    }
+    #conn-dot.ok      { background: #4CAF50; }
+    #conn-dot.err     { background: #e53935; }
+    #conn-dot.loading { background: #FFC107; }
+
+    /* ===================== ERROR TOAST ===================== */
+    #err-toast {
+      display: none; position: fixed; bottom: 48px; right: 10px;
+      background: rgba(0,0,0,0.85); border: 1px solid #e53935;
+      color: #ff6b6b; font-size: 11px; padding: 8px 12px;
+      z-index: 450; max-width: 320px;
+    }
+    #err-toast.show { display: block; }
+  </style>
+</head>
+<body style="background-color: #111;">
+
+  <div id="bg"></div>
+  <div id="conn-dot"></div>
+
+  <div id="layout">
+
+    <!-- TOP BAR -->
+    <div id="top-bar">
+
+      <!-- zone-area moved to #zones-panel -->
+
+      <div id="logo">Dex<span class="v">Vision</span></div>
+
+    </div>
+
+    <div id="mid"></div>
+
+    <!-- BOTTOM BAR -->
+    <div id="bottom-bar" dex-noedit>
+
+      <!-- ROW 1: gender counts + age distribution -->
+      <div id="bb-row1">
+
+        <div id="summary-left">
+          <div class="sum-item sum-total-main">
+            <span style="font-size:18px;color:#666;">&#128694;</span>
+            <span id="sl-total-cur-pre" class="sum-cur">—</span>
+            <span id="sl-total-acc-pre" class="sum-acc">/—</span>
+          </div>
+          <div class="sum-vsep"></div>
+          <div class="sum-item">
+            <span class="sum-icon">&#9794;</span>
+            <span id="sl-male-cur" class="sum-cur">—</span>
+            <span id="sl-male-acc" class="sum-acc">/—</span>
+          </div>
+          <div class="sum-item">
+            <span class="sum-icon">&#9792;</span>
+            <span id="sl-female-cur" class="sum-cur">—</span>
+            <span id="sl-female-acc" class="sum-acc">/—</span>
+          </div>
+          <div class="sum-item">
+            <span class="sum-icon" style="font-size:18px;">&#128100;</span>
+            <span id="sl-unknown-cur" class="sum-cur">—</span>
+            <span id="sl-unknown-acc" class="sum-acc">/—</span>
+          </div>
+          <div class="sum-item">
+            <span class="sum-icon">&#128101;</span>
+            <span id="sl-total-cur" class="sum-cur">—</span>
+            <span id="sl-total-acc" class="sum-acc">/—</span>
+          </div>
+        </div>
+
+        <div class="bar-sep"></div>
+
+        <div id="attention-section">
+          <span class="attn-eye">&#128065;</span>
+          <div class="attn-item">
+            <span class="attn-lbl">&#9794;</span>
+            <span id="at-male-cur" class="attn-cur">—</span><span id="at-male-acc" class="attn-acc">—</span>
+          </div>
+          <div class="attn-item">
+            <span class="attn-lbl">&#9792;</span>
+            <span id="at-female-cur" class="attn-cur">—</span><span id="at-female-acc" class="attn-acc">—</span>
+          </div>
+          <div class="attn-item">
+            <span class="attn-lbl">&#128100;</span>
+            <span id="at-unknown-cur" class="attn-cur">—</span><span id="at-unknown-acc" class="attn-acc">—</span>
+          </div>
+        </div>
+
+        <div class="bar-sep"></div>
+
+        <!-- Age groups (7 columns, populated by JS) -->
+        <div id="age-grid"></div>
+
+      </div>
+
+      <!-- ROW 2: zone info + crossing lines -->
+      <div id="bb-row2">
+
+        <div id="zone-info">
+          <div id="zi-name" class="zi-name">—</div>
+          <div class="zi-counts">
+            <div class="zi-item"><span class="zi-icon">&#9794;</span><span id="zi-male-cur" class="sum-cur">—</span><span id="zi-male-acc" class="sum-acc">—</span></div>
+            <div class="zi-item"><span class="zi-icon">&#9792;</span><span id="zi-female-cur" class="sum-cur">—</span><span id="zi-female-acc" class="sum-acc">—</span></div>
+            <div class="zi-item"><span class="zi-icon">&#128100;</span><span id="zi-unknown-cur" class="sum-cur">—</span><span id="zi-unknown-acc" class="sum-acc">—</span></div>
+            <div class="zi-item"><span class="zi-icon">&#128101;</span><span id="zi-total-cur" class="sum-cur">—</span><span id="zi-total-acc" class="sum-acc">—</span></div>
+          </div>
+        </div>
+
+        <div class="bar-sep"></div>
+
+        <!-- Crossing lines (populated by JS) -->
+        <div id="crossings-section"></div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <div id="err-toast"></div>
+  <button id="gear-btn" onclick="cfgToggle()">&#9881;</button>
+  <div id="cfg-overlay" onclick="cfgToggle()"></div>
+  <div id="cfg-panel">
+    <div class="cfg-title">&#9881; Configuración DexVision</div>
+
+    <div class="cfg-field">
+      <label>URL de la API</label>
+      <input id="c-url" type="text" placeholder="http://192.168.4.16:3000" />
+      <div class="cfg-hint">Ej: http://192.168.4.16:3000 &nbsp;|&nbsp; http://localhost:3000</div>
+    </div>
+
+    <div class="cfg-field">
+      <label>Intervalo de actualización (segundos)</label>
+      <input id="c-interval" type="number" min="1" max="300" placeholder="5" />
+    </div>
+
+    <div class="cfg-field">
+      <label>Opacidad de paneles (0–100%)</label>
+      <input id="c-opacity" type="number" min="0" max="100" placeholder="72" />
+      <div class="cfg-hint">0 = transparente, 100 = sólido. Aplica a barra inferior y panel de zonas.</div>
+    </div>
+
+    <div class="cfg-actions">
+      <button class="btn-save" onclick="cfgSave()">Guardar y aplicar</button>
+      <button class="btn-cancel" onclick="cfgToggle()">Cancelar</button>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================
+    // DEXVISION TEMPLATE v1.0.0
+    // Endpoints usados:
+    //   GET {apiUrl}/stream/raw/latest            → image (base64)
+    //   GET {apiUrl}/stream/people-count/consolidated → counts + age ranges
+    //   GET {apiUrl}/stream/inference/latest      → system stats (cuando disponible)
+    // ============================================================
+
+    // Dex Manager bindings (reemplazados en runtime por Dex Manager)
+    var BINDING_API_URL  = '{{apiUrl}}';
+    var BINDING_INTERVAL = '{{interval}}';
+    var BINDING_OPACITY  = '{{opacity}}';
+
+    var DEFAULTS = { apiUrl: 'http://192.168.4.16:3000', interval: 5, panelX: 10, panelY: 80, opacity: 72 };
+
+    // ---- Config ----
+    function cfgLoad() {
+      var saved = {};
+      try { saved = JSON.parse(localStorage.getItem('dv_cfg') || '{}'); } catch(e) {}
+      var c = Object.assign({}, DEFAULTS, saved);
+      if (BINDING_API_URL  && BINDING_API_URL.indexOf('{{')  === -1) c.apiUrl   = BINDING_API_URL;
+      if (BINDING_INTERVAL && BINDING_INTERVAL.indexOf('{{') === -1) c.interval = Math.max(1, parseInt(BINDING_INTERVAL) || DEFAULTS.interval);
+      if (BINDING_OPACITY  && BINDING_OPACITY.indexOf('{{')  === -1) c.opacity  = Math.min(100, Math.max(0, parseInt(BINDING_OPACITY) || DEFAULTS.opacity));
+      return c;
+    }
+
+    var cfg = cfgLoad();
+
+    // Apply panel position on load (after DOM ready)
+    document.addEventListener('DOMContentLoaded', function() { applyPanelPosition(); applyOpacity(); });
+
+    function cfgToggle() {
+      var panel = document.getElementById('cfg-panel');
+      var ov    = document.getElementById('cfg-overlay');
+      if (!panel.classList.contains('open')) {
+        document.getElementById('c-url').value      = cfg.apiUrl;
+        document.getElementById('c-interval').value = cfg.interval;
+        document.getElementById('c-opacity').value  = cfg.opacity;
+      }
+      panel.classList.toggle('open');
+      ov.classList.toggle('open');
+    }
+
+    function cfgSave() {
+      cfg.apiUrl   = (document.getElementById('c-url').value.trim() || DEFAULTS.apiUrl).replace(/\/$/, '');
+      cfg.interval = Math.max(1, parseInt(document.getElementById('c-interval').value) || DEFAULTS.interval);
+      cfg.opacity  = Math.min(100, Math.max(0, parseInt(document.getElementById('c-opacity').value) || DEFAULTS.opacity));
+      try { localStorage.setItem('dv_cfg', JSON.stringify(cfg)); } catch(e) {}
+      applyPanelPosition();
+      applyOpacity();
+      cfgToggle();
+      pollRestart();
+    }
+
+    // ---- Status ----
+    function setDot(s) { document.getElementById('conn-dot').className = s; }
+
+    var toastTimer = null;
+    function toast(msg) {
+      var el = document.getElementById('err-toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function() { el.classList.remove('show'); }, 5000);
+    }
+
+    // ---- Polling ----
+    var pollTimer = null;
+
+    function pollRestart() {
+      if (pollTimer) clearInterval(pollTimer);
+      fetchAll();
+      pollTimer = setInterval(fetchAll, cfg.interval * 1000);
+    }
+
+    function apiFetch(path) {
+      return fetch(cfg.apiUrl.replace(/\/$/, '') + path, { cache: 'no-store' })
+        .then(function(r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        });
+    }
+
+    function fetchAll() {
+      setDot('loading');
+      Promise.all([
+        apiFetch('/stream/raw/latest'),
+        apiFetch('/stream/people-count/consolidated'),
+        apiFetch('/stream/inference/latest').catch(function() { return null; })
+      ])
+      .then(function(results) {
+        console.log('[DexVision] raw/latest:',            results[0]);
+        console.log('[DexVision] people-count/consolidated:', results[1]);
+        console.log('[DexVision] inference/latest:',      results[2]);
+        renderBg(results[0]);
+        renderCounts(results[1]);
+        renderSystem(results[2]);
+        setDot('ok');
+      })
+      .catch(function(e) {
+        console.error('[DexVision]', e);
+        setDot('err');
+        toast('Error conectando a ' + cfg.apiUrl + ' — ' + e.message);
+      });
+    }
+
+    // ============================================================
+    // RENDER — Background image
+    // ============================================================
+    function renderBg(data) {
+      if (!data || !data.image) return;
+      var s = String(data.image);
+      var src = s.indexOf('data:') === 0 ? s : 'data:image/jpeg;base64,' + s;
+      document.getElementById('bg').style.backgroundImage = 'url("' + src + '")';
+    }
+
+    // ============================================================
+    // RENDER — People counts
+    // Response shape:
+    // {
+    //   timestamp,
+    //   consolidatedPeopleReport: {
+    //     current:     { total, male, female, genderUnknown },
+    //     accumulated: { total, male, female, genderUnknown },
+    //     ageRanges: { ranges: [{ ageRange:{lowerBound,upperBound}, current:{...}, accumulated:{...} }] },
+    //     crossings: { subAreasCrossings: [{ subAreaId, subAreaName, ... }] }
+    //   }
+    // }
+    // ============================================================
+    function renderCounts(data) {
+      if (!data) return;
+      var report = data.consolidatedPeopleReport;
+      if (!report) return;
+
+      var cur = report.current     || {};
+      var acc = report.accumulated || {};
+
+      // Use subAreasPresences for zone-level counts (more accurate per-zone data)
+      var presences = (report.subAreasPresences && report.subAreasPresences.presenceBySubArea) || [];
+      var firstZone = presences[0] || {};
+      var zoneName  = firstZone.subAreaName || 'Zona';
+      var zoneId    = firstZone.subAreaId   || '—';
+      var zoneCur   = firstZone.current     || cur;
+      var zoneAcc   = firstZone.accumulated || acc;
+
+      // Zone info in row2
+      setText('zi-name', zoneName + ' (ID: ' + zoneId + ')');
+      setText('zi-male-cur',    d(zoneCur.male));          setText('zi-male-acc',    d(zoneAcc.male));
+      setText('zi-female-cur',  d(zoneCur.female));        setText('zi-female-acc',  d(zoneAcc.female));
+      setText('zi-unknown-cur', d(zoneCur.genderUnknown)); setText('zi-unknown-acc', d(zoneAcc.genderUnknown));
+      setText('zi-total-cur',   d(zoneCur.total));         setText('zi-total-acc',   d(zoneAcc.total));
+
+      // Bottom-left: global totals
+      var gTCur = d(cur.total);         var gTAcc = d(acc.total);
+      var gMCur = d(cur.male);          var gMAcc = d(acc.male);
+      var gFCur = d(cur.female);        var gFAcc = d(acc.female);
+      var gUCur = d(cur.genderUnknown); var gUAcc = d(acc.genderUnknown);
+
+      setText('sl-total-cur',   gTCur); setText('sl-total-acc',   gTAcc);
+      setText('sl-total-cur-pre', gTCur); setText('sl-total-acc-pre', gTAcc);
+      setText('sl-male-cur',    gMCur); setText('sl-male-acc',    gMAcc);
+      setText('sl-female-cur',  gFCur); setText('sl-female-acc',  gFAcc);
+      setText('sl-unknown-cur', gUCur); setText('sl-unknown-acc', gUAcc);
+
+      // Attention time
+      var attn = report.attention || {};
+      var aC = attn.current     || {};
+      var aA = attn.accumulated || {};
+      setText('at-total-cur',   msToSec(aC.totalMillis));
+      setText('at-total-acc',   msToSec(aA.totalMillis));
+      setText('at-male-cur',    msToSec(aC.male));
+      setText('at-male-acc',    msToSec(aA.male));
+      setText('at-female-cur',  msToSec(aC.female));
+      setText('at-female-acc',  msToSec(aA.female));
+      setText('at-unknown-cur', msToSec(aC.genderUnknown));
+      setText('at-unknown-acc', msToSec(aA.genderUnknown));
+
+      // Crossing lines
+      if (report.crossings && report.crossings.subAreasCrossings) {
+        renderCrossings(report.crossings.subAreasCrossings);
+      }
+
+      // Age ranges
+      if (report.ageRanges && report.ageRanges.ranges) {
+        renderAgeRanges(report.ageRanges.ranges);
+      }
+    }
+
+    function applyOpacity() {
+      var alpha = ((cfg.opacity !== undefined ? cfg.opacity : DEFAULTS.opacity) / 100).toFixed(2);
+      document.documentElement.style.setProperty('--panel-alpha', alpha);
+    }
+
+    function applyPanelPosition() {
+      var p = document.getElementById('zones-panel');
+      p.style.left = (cfg.panelX || DEFAULTS.panelX) + 'px';
+      p.style.top  = (cfg.panelY || DEFAULTS.panelY) + 'px';
+    }
+
+    function renderZonesPanel(report) {
+      var p = document.getElementById('zones-panel');
+      var subAreasCrossings = (report.crossings && report.crossings.subAreasCrossings) || [];
+      var presences = (report.subAreasPresences && report.subAreasPresences.presenceBySubArea) || [];
+
+      // Build a map of zoneId -> presence data
+      var presMap = {};
+      presences.forEach(function(z) { presMap[z.subAreaId] = z; });
+
+      var html = '<div class="zp-title">&#128247; Sub-áreas y l&#237;neas</div>';
+
+      subAreasCrossings.forEach(function(zone) {
+        var pres = presMap[zone.subAreaId] || {};
+        var cur  = pres.current     || {};
+        var acc  = pres.accumulated || {};
+        var lines = zone.crossingsByLine || [];
+
+        html += '<div class="zp-zone">';
+        html += '<div class="zp-zone-name">' + (zone.subAreaName || 'Zona ' + zone.subAreaId) + ' <span style="color:#555;font-size:10px;">(ID: ' + zone.subAreaId + ')</span></div>';
+
+        // Presence counts
+        html += '<div class="zp-presence">' +
+          '<span class="zp-pres-item"><span class="zp-pres-icon">&#9794;</span><span class="zp-pres-cur">' + d(cur.male) + '</span><span class="zp-pres-acc">' + d(acc.male) + '</span></span>' +
+          '<span class="zp-pres-item"><span class="zp-pres-icon">&#9792;</span><span class="zp-pres-cur">' + d(cur.female) + '</span><span class="zp-pres-acc">' + d(acc.female) + '</span></span>' +
+          '<span class="zp-pres-item"><span class="zp-pres-icon">&#128100;</span><span class="zp-pres-cur">' + d(cur.genderUnknown) + '</span><span class="zp-pres-acc">' + d(acc.genderUnknown) + '</span></span>' +
+          '<span class="zp-pres-item"><span class="zp-pres-icon">&#128101;</span><span class="zp-pres-cur">' + d(cur.total) + '</span><span class="zp-pres-acc">' + d(acc.total) + '</span></span>' +
+          '</div>';
+
+        // Crossing lines
+        if (lines.length) {
+          html += '<div class="zp-lines-title">L&#237;neas de cruce</div>';
+          lines.forEach(function(line) {
+            var pos = (line.positiveCrossingCount && line.positiveCrossingCount.total) || 0;
+            var neg = (line.negativeCrossingCount && line.negativeCrossingCount.total) || 0;
+            html += '<div class="zp-line">' +
+              '<span class="zp-line-name">' + (line.countingLineName || 'L&#237;nea ' + line.countingLineId) + '</span>' +
+              '<span class="zp-arrow">&#8593;</span><span class="zp-count">' + pos + '</span>' +
+              '<span class="zp-arrow zp-count-neg">&#8595;</span><span class="zp-count zp-count-neg">' + neg + '</span>' +
+              '</div>';
+          });
+        }
+
+        html += '</div>';
+      });
+      p.innerHTML = html;
+    }
+
+    function renderCrossings(subAreasCrossings) {
+      var container = document.getElementById('crossings-section');
+      container.innerHTML = '';
+
+      subAreasCrossings.forEach(function(zone) {
+        var lines = zone.crossingsByLine || [];
+        if (!lines.length) return;
+
+        var zoneDiv = document.createElement('div');
+
+        lines.forEach(function(line) {
+          var posIn  = (line.positiveCrossingCount  && line.positiveCrossingCount.total)  || 0;
+          var negOut = (line.negativeCrossingCount  && line.negativeCrossingCount.total)  || 0;
+
+          var row = document.createElement('div');
+          row.className = 'cross-line';
+          row.innerHTML =
+            '<span class="cross-line-name">' + (line.countingLineName || 'Línea ' + line.countingLineId) + '</span>' +
+            '<span class="cross-arrow">&#8593;</span><span class="cross-in">'  + posIn  + '</span>' +
+            '<span class="cross-arrow">&#8595;</span><span class="cross-out">' + negOut + '</span>';
+          zoneDiv.appendChild(row);
+        });
+
+        container.appendChild(zoneDiv);
+      });
+    }
+
+    function renderAgeRanges(ranges) {
+      var container = document.getElementById('age-grid');
+      container.innerHTML = '';
+
+      // Collapse into 7 display groups: [0-20],[21-25],[26-30],[31-35],[36-40],[41-45],[+46]
+      var displayGroups = [
+        { label: '0-20',  filter: function(lb) { return lb < 21; } },
+        { label: '21-25', filter: function(lb) { return lb >= 21 && lb <= 25; } },
+        { label: '26-30', filter: function(lb) { return lb >= 26 && lb <= 30; } },
+        { label: '31-35', filter: function(lb) { return lb >= 31 && lb <= 35; } },
+        { label: '36-40', filter: function(lb) { return lb >= 36 && lb <= 40; } },
+        { label: '41-45', filter: function(lb) { return lb >= 41 && lb <= 45; } },
+        { label: '+46',   filter: function(lb) { return lb >= 46; } }
+      ];
+
+      displayGroups.forEach(function(group) {
+        // Sum all API ranges that fall into this display group
+        var mCur=0, mAcc=0, fCur=0, fAcc=0, uCur=0, uAcc=0;
+        ranges.forEach(function(r) {
+          var lb = r.ageRange ? r.ageRange.lowerBound : -1;
+          if (!group.filter(lb)) return;
+          var c = r.current     || {};
+          var a = r.accumulated || {};
+          mCur += c.male          || 0;  mAcc += a.male          || 0;
+          fCur += c.female        || 0;  fAcc += a.female        || 0;
+          uCur += c.genderUnknown || 0;  uAcc += a.genderUnknown || 0;
+        });
+
+        var col = document.createElement('div');
+        col.className = 'age-col';
+        col.innerHTML =
+          '<div class="age-col-label">[' + group.label + ']</div>' +
+          '<div class="age-row"><span class="r-icon">&#9794;</span><span class="' + nz(mCur) + '">' + mCur + '/' + mAcc + '</span></div>' +
+          '<div class="age-row"><span class="r-icon">&#9792;</span><span class="' + nz(fCur) + '">' + fCur + '/' + fAcc + '</span></div>' +
+          '<div class="age-row"><span class="r-icon">&#128100;</span><span class="' + nz(uCur) + '">' + uCur + '/' + uAcc + '</span></div>';
+        container.appendChild(col);
+      });
+    }
+
+    // ============================================================
+    // RENDER — System stats (from inference/latest when available)
+    // ============================================================
+    function renderSystem(data) {
+      if (!data) return;
+      // Field names are flexible — adjust here if the API evolves
+      var v;
+      if ((v = data.memory      || data.availableMemory  || data.memoryMB)   != null) setText('s-mem', v);
+      if ((v = data.cpu         || data.cpuUsage         || data.cpuPercent)  != null) setText('s-cpu', v);
+      if ((v = data.fps         || data.objectDetectionFps|| data.detectionFps)!= null) setText('s-fps', v);
+      if ((v = data.context     || data.currentContext)                        != null) setText('s-ctx', v || 'None');
+
+      var res = data.resolution || data.res;
+      if (res) {
+        var raw  = res.raw    || res.input  || (res.width  ? res.width  + ' x ' + res.height  : null);
+        var prev = res.preview|| res.output || raw;
+        if (raw)  setText('s-res-raw', raw);
+        if (prev) setText('s-res-pre', prev);
+      }
+
+      var exec = data.executionTime || data.uptime || data.runtime;
+      if (exec && typeof exec === 'object') {
+        var inf = exec.inferences || exec.inference || exec.total;
+        var app = exec.app || exec.application;
+        setText('s-exec', 'Inferences: ' + d(inf) + (app ? '  App: ' + d(app) : ''));
+      } else if (exec) {
+        setText('s-exec', exec);
+      }
+    }
+
+    // ============================================================
+    // HELPERS
+    // ============================================================
+    function msToSec(ms) {
+      if (ms === null || ms === undefined) return '—';
+      return Math.round(ms / 1000) + 's';
+    }
+
+    function setText(id, val) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = (val !== null && val !== undefined) ? val : '—';
+    }
+
+    function d(val) { return (val !== null && val !== undefined) ? val : '—'; }
+
+    function cnt(cur, acc) { return cur + '/' + acc; }
+
+    function nz(v) { return (v !== null && v !== undefined && v !== 0 && v !== '0') ? 'val-nz' : 'val-zr'; }
+
+    // ============================================================
+    // INIT
+    // ============================================================
+    pollRestart();
+
+  </script>
+</body>
+</html>

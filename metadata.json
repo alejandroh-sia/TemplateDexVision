@@ -1,0 +1,53 @@
+{
+  "author": "Dex",
+  "name": "DexVision Analytics",
+  "description": "Dashboard de analytics de video con detección de personas en tiempo real. Muestra conteos por género, grupos etarios y feed de cámara en vivo.",
+  "icon": "icon.png",
+  "version": "1.0.0",
+  "preview": ["preview.jpg"],
+  "tags": ["analytics", "people counting", "AI", "video", "security", "dexvision", "camera"],
+  "properties": {
+    "minWidth": 1280,
+    "minHeight": 720,
+    "responsive": true,
+    "fonts": ["Segoe UI"]
+  },
+  "bindings": [
+    {
+      "id": "apiUrl",
+      "name": "URL de la API",
+      "description": "URL base de la API DexVision. Ej: http://192.168.4.16:3000 o http://localhost:3000",
+      "type": "Url",
+      "value": "http://192.168.4.16:3000",
+      "hidden": false,
+      "rules": {
+        "required": true,
+        "messages": {
+          "required": "La URL de la API es requerida"
+        }
+      }
+    },
+    {
+      "id": "interval",
+      "name": "Intervalo de actualización (seg)",
+      "description": "Cada cuántos segundos se consulta la API. Mínimo 1 segundo.",
+      "type": "String",
+      "value": "5",
+      "hidden": false,
+      "rules": {
+        "required": false
+      }
+    },
+    {
+      "id": "opacity",
+      "name": "Opacidad de paneles (0–100)",
+      "description": "Transparencia de la barra inferior. 0 = transparente, 100 = sólido.",
+      "type": "String",
+      "value": "72",
+      "hidden": false,
+      "rules": {
+        "required": false
+      }
+    }
+  ]
+}
