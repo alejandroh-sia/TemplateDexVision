@@ -580,7 +580,7 @@
     var cfg = cfgLoad();
 
     // Apply panel position on load (after DOM ready)
-    document.addEventListener('DOMContentLoaded', function() { applyPanelPosition(); applyOpacity(); });
+    document.addEventListener('DOMContentLoaded', function() { applyOpacity(); });
 
     function cfgToggle() {
       var panel = document.getElementById('cfg-panel');
@@ -599,7 +599,6 @@
       cfg.interval = Math.max(1, parseInt(document.getElementById('c-interval').value) || DEFAULTS.interval);
       cfg.opacity  = Math.min(100, Math.max(0, parseInt(document.getElementById('c-opacity').value) || DEFAULTS.opacity));
       try { localStorage.setItem('dv_cfg', JSON.stringify(cfg)); } catch(e) {}
-      applyPanelPosition();
       applyOpacity();
       cfgToggle();
       pollRestart();
@@ -744,11 +743,6 @@
       document.documentElement.style.setProperty('--panel-alpha', alpha);
     }
 
-    function applyPanelPosition() {
-      var p = document.getElementById('zones-panel');
-      p.style.left = (cfg.panelX || DEFAULTS.panelX) + 'px';
-      p.style.top  = (cfg.panelY || DEFAULTS.panelY) + 'px';
-    }
 
     function renderZonesPanel(report) {
       var p = document.getElementById('zones-panel');
