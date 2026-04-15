@@ -22,9 +22,10 @@
     #bg {
       position: absolute;
       inset: 0;
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
       z-index: 0;
     }
 
@@ -469,7 +470,7 @@
 </head>
 <body style="background-color: #111;">
 
-  <div id="bg"></div>
+  <img id="bg" alt="" />
   <div id="conn-dot" onclick="dbgToggle()" title="Click para debug"></div>
 
   <div id="layout">
@@ -810,11 +811,16 @@
     // ============================================================
     // RENDER — Background image
     // ============================================================
+    var _lastImgLen = 0;
     function renderBg(data) {
       if (!data || !data.image) return;
       var s = String(data.image);
+      // Evitar re-render si la imagen no cambió (mismo tamaño = mismo frame)
+      if (s.length === _lastImgLen) return;
+      _lastImgLen = s.length;
       var src = s.indexOf('data:') === 0 ? s : 'data:image/jpeg;base64,' + s;
-      document.getElementById('bg').style.backgroundImage = 'url("' + src + '")';
+      var img = document.getElementById('bg');
+      img.src = src;
     }
 
     // ============================================================
