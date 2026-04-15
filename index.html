@@ -401,10 +401,11 @@
     /* ===================== STATUS DOT ===================== */
     #conn-dot {
       position: fixed; top: 7px; right: 7px;
-      width: 7px; height: 7px; border-radius: 50%;
-      background: #444; z-index: 400;
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #444; z-index: 400; cursor: pointer;
       -webkit-transition: background 0.3s; transition: background 0.3s;
     }
+    #conn-dot:hover { opacity: 0.75; }
     #conn-dot.ok      { background: #4CAF50; }
     #conn-dot.err     { background: #e53935; }
     #conn-dot.loading { background: #FFC107; }
@@ -417,12 +418,36 @@
       z-index: 450; max-width: 320px;
     }
     #err-toast.show { display: block; }
+
+    /* ===================== DEBUG PANEL ===================== */
+    #debug-panel {
+      display: none; position: fixed; top: 20px; right: 10px;
+      background: rgba(10,10,10,0.95); border: 1px solid #e53935;
+      color: #eee; font-size: 11px; padding: 12px 14px;
+      z-index: 500; min-width: 280px; max-width: 380px;
+      border-radius: 6px; font-family: monospace;
+    }
+    #debug-panel.show { display: block; }
+    .dbg-title { color: #e53935; font-weight: 700; margin-bottom: 8px; font-size: 12px; }
+    .dbg-row   { display: flex; gap: 6px; margin-bottom: 4px; flex-wrap: wrap; }
+    .dbg-lbl   { color: #888; min-width: 90px; flex-shrink: 0; }
+    .dbg-val   { color: #fff; word-break: break-all; }
+    .dbg-val.ok  { color: #4CAF50; }
+    .dbg-val.err { color: #e53935; }
+    .dbg-val.warn { color: #FFC107; }
+    .dbg-sep   { border-top: 1px solid #333; margin: 6px 0; }
+    #debug-panel .dbg-close { float: right; cursor: pointer; color: #888; margin-left: 8px; }
+    #debug-panel .dbg-close:hover { color: #fff; }
+    #debug-ping { margin-top: 8px; }
+    .dbg-ping-btn { background: #333; border: 1px solid #555; color: #eee; font-size: 11px;
+      padding: 3px 8px; cursor: pointer; border-radius: 3px; }
+    .dbg-ping-btn:hover { background: #444; }
   </style>
 </head>
 <body style="background-color: #111;">
 
   <div id="bg"></div>
-  <div id="conn-dot"></div>
+  <div id="conn-dot" onclick="dbgToggle()" title="Click para debug"></div>
 
   <div id="layout">
 
@@ -522,6 +547,24 @@
   </div>
 
   <div id="err-toast"></div>
+
+  <div id="debug-panel">
+    <span class="dbg-close" onclick="dbgHide()">✕</span>
+    <div class="dbg-title">⚠ Debug DexVision</div>
+    <div class="dbg-row"><span class="dbg-lbl">API URL</span><span class="dbg-val" id="dbg-url">—</span></div>
+    <div class="dbg-row"><span class="dbg-lbl">Intervalo</span><span class="dbg-val" id="dbg-interval">—</span></div>
+    <div class="dbg-row"><span class="dbg-lbl">Último poll</span><span class="dbg-val" id="dbg-time">—</span></div>
+    <div class="dbg-sep"></div>
+    <div class="dbg-row"><span class="dbg-lbl">/raw/latest</span><span class="dbg-val" id="dbg-raw">—</span></div>
+    <div class="dbg-row"><span class="dbg-lbl">/people-count</span><span class="dbg-val" id="dbg-counts">—</span></div>
+    <div class="dbg-row"><span class="dbg-lbl">/inference</span><span class="dbg-val" id="dbg-inference">—</span></div>
+    <div class="dbg-sep"></div>
+    <div class="dbg-row"><span class="dbg-lbl">Último error</span><span class="dbg-val err" id="dbg-error">—</span></div>
+    <div id="debug-ping">
+      <button class="dbg-ping-btn" onclick="dbgPing()">🔗 Ping Swagger</button>
+      <span id="dbg-ping-result" style="margin-left:8px;font-size:11px;color:#aaa;"></span>
+    </div>
+  </div>
   <button id="gear-btn" onclick="cfgToggle()">&#9881;</button>
   <div id="cfg-overlay" onclick="cfgToggle()"></div>
   <div id="cfg-panel">
@@ -604,16 +647,64 @@
       pollRestart();
     }
 
-    // ---- Status ----
+    // ---- Status dot ----
     function setDot(s) { document.getElementById('conn-dot').className = s; }
 
+    // ---- Toast (solo para errores transitorios) ----
     var toastTimer = null;
-    function toast(msg) {
+    function toast(msg, persist) {
       var el = document.getElementById('err-toast');
       el.textContent = msg;
       el.classList.add('show');
       clearTimeout(toastTimer);
-      toastTimer = setTimeout(function() { el.classList.remove('show'); }, 5000);
+      if (!persist) toastTimer = setTimeout(function() { el.classList.remove('show'); }, 5000);
+    }
+    function toastHide() {
+      clearTimeout(toastTimer);
+      document.getElementById('err-toast').classList.remove('show');
+    }
+
+    // ---- Debug panel ----
+    var lastErr = null;
+    var dbgVisible = false;
+
+    function dbgToggle() {
+      dbgVisible = !dbgVisible;
+      dbgRefresh();
+      document.getElementById('debug-panel').classList.toggle('show', dbgVisible);
+    }
+    function dbgHide() {
+      dbgVisible = false;
+      document.getElementById('debug-panel').classList.remove('show');
+    }
+    function dbgSet(id, val, cls) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = val;
+      el.className = 'dbg-val' + (cls ? ' ' + cls : '');
+    }
+    function dbgRefresh() {
+      dbgSet('dbg-url', cfg.apiUrl);
+      dbgSet('dbg-interval', cfg.interval + 's');
+    }
+    function dbgEndpoint(id, ok, detail) {
+      dbgSet(id, ok ? '✓ OK' : '✗ ' + detail, ok ? 'ok' : 'err');
+    }
+    function dbgPing() {
+      var res = document.getElementById('dbg-ping-result');
+      res.textContent = 'Conectando…';
+      res.style.color = '#FFC107';
+      var t0 = Date.now();
+      fetch(cfg.apiUrl.replace(/\/$/, '') + '/api', { cache: 'no-store', signal: AbortSignal.timeout(5000) })
+        .then(function(r) {
+          var ms = Date.now() - t0;
+          res.textContent = (r.ok || r.status === 404 ? '✓ Servidor responde' : '⚠ HTTP ' + r.status) + ' (' + ms + 'ms)';
+          res.style.color = '#4CAF50';
+        })
+        .catch(function(e) {
+          res.textContent = '✗ ' + e.message;
+          res.style.color = '#e53935';
+        });
     }
 
     // ---- Polling ----
@@ -626,33 +717,60 @@
     }
 
     function apiFetch(path) {
-      return fetch(cfg.apiUrl.replace(/\/$/, '') + path, { cache: 'no-store' })
+      return fetch(cfg.apiUrl.replace(/\/$/, '') + path, { cache: 'no-store', signal: AbortSignal.timeout(8000) })
         .then(function(r) {
-          if (!r.ok) throw new Error('HTTP ' + r.status);
+          if (!r.ok) throw new Error('HTTP ' + r.status + ' en ' + path);
           return r.json();
         });
     }
 
     function fetchAll() {
       setDot('loading');
+      var now = new Date().toLocaleTimeString();
+
+      var rawP    = apiFetch('/stream/raw/latest');
+      var countsP = apiFetch('/stream/people-count/consolidated');
+      var inferP  = apiFetch('/stream/inference/latest')
+        .then(function(d) {
+          var hasData = d && Object.keys(d).length > 1; // más que solo timestamp
+          dbgSet('dbg-inference', hasData ? '✓ OK' : '✓ 200 (sin datos)', hasData ? 'ok' : 'warn');
+          return d;
+        })
+        .catch(function(e) {
+          dbgEndpoint('dbg-inference', false, e.message);
+          return null;
+        });
+
       Promise.all([
-        apiFetch('/stream/raw/latest'),
-        apiFetch('/stream/people-count/consolidated'),
-        apiFetch('/stream/inference/latest').catch(function() { return null; })
+        rawP.then(function(d)    { dbgEndpoint('dbg-raw',    true);            return d; })
+            .catch(function(e)   { dbgEndpoint('dbg-raw',    false, e.message); throw e; }),
+        countsP.then(function(d) { dbgEndpoint('dbg-counts', true);            return d; })
+               .catch(function(e){ dbgEndpoint('dbg-counts', false, e.message); throw e; }),
+        inferP
       ])
       .then(function(results) {
-        console.log('[DexVision] raw/latest:',            results[0]);
-        console.log('[DexVision] people-count/consolidated:', results[1]);
-        console.log('[DexVision] inference/latest:',      results[2]);
+        dbgSet('dbg-time', now, 'ok');
+        dbgSet('dbg-error', '—');
         renderBg(results[0]);
         renderCounts(results[1]);
         renderSystem(results[2]);
         setDot('ok');
+        toastHide();
+        lastErr = null;
       })
       .catch(function(e) {
+        lastErr = e.message;
+        dbgSet('dbg-time', now, 'warn');
+        dbgSet('dbg-error', e.message, 'err');
         console.error('[DexVision]', e);
         setDot('err');
-        toast('Error conectando a ' + cfg.apiUrl + ' — ' + e.message);
+        toast('⚠ ' + e.message + ' — Click en el punto rojo para debug', true);
+        if (!dbgVisible) {
+          // Abrir panel automáticamente en el primer error
+          dbgVisible = true;
+          dbgRefresh();
+          document.getElementById('debug-panel').classList.add('show');
+        }
       });
     }
 
