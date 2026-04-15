@@ -580,6 +580,8 @@
     <div class="dbg-row"><span class="dbg-lbl">Último poll</span><span class="dbg-val" id="dbg-time">—</span></div>
     <div class="dbg-sep"></div>
     <div class="dbg-row"><span class="dbg-lbl">/raw/latest</span><span class="dbg-val" id="dbg-raw">—</span></div>
+    <div class="dbg-row"><span class="dbg-lbl">img timestamp</span><span class="dbg-val" id="dbg-img-ts">—</span></div>
+    <div class="dbg-row"><span class="dbg-lbl">img actualizada</span><span class="dbg-val" id="dbg-img-changed">—</span></div>
     <div class="dbg-row"><span class="dbg-lbl">/people-count</span><span class="dbg-val" id="dbg-counts">—</span></div>
     <div class="dbg-row"><span class="dbg-lbl">/inference</span><span class="dbg-val" id="dbg-inference">—</span></div>
     <div class="dbg-sep"></div>
@@ -812,15 +814,22 @@
     // RENDER — Background image
     // ============================================================
     var _lastImgLen = 0;
+    var _lastImgTs  = 0;
     function renderBg(data) {
       if (!data || !data.image) return;
-      var s = String(data.image);
-      // Evitar re-render si la imagen no cambió (mismo tamaño = mismo frame)
-      if (s.length === _lastImgLen) return;
+      var s  = String(data.image);
+      var ts = data.timestamp || 0;
+      var tsStr = ts ? new Date(ts).toLocaleTimeString() + ' (' + ts + ')' : '—';
+      dbgSet('dbg-img-ts', tsStr);
+
+      var changed = s.length !== _lastImgLen || ts !== _lastImgTs;
+      dbgSet('dbg-img-changed', changed ? '✓ sí' : '✗ mismo frame', changed ? 'ok' : 'warn');
+
+      if (!changed) return;
       _lastImgLen = s.length;
+      _lastImgTs  = ts;
       var src = s.indexOf('data:') === 0 ? s : 'data:image/jpeg;base64,' + s;
-      var img = document.getElementById('bg');
-      img.src = src;
+      document.getElementById('bg').src = src;
     }
 
     // ============================================================
