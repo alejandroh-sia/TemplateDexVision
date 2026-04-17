@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DexVision Analytics</title>
   <style>
-    :root { --panel-alpha: 0.72; }
+    :root { --panel-bg: rgba(0,0,0,0.72); --panel-bg-dark: rgba(10,14,20,0.72); }
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
@@ -120,7 +120,7 @@
     /* Logo */
     #logo {
       padding: 8px 14px;
-      font-size: 26px;
+      font-size: 34px;
       font-weight: 800;
       -webkit-flex-shrink: 0;
       flex-shrink: 0;
@@ -133,7 +133,7 @@
 
     /* ===================== BOTTOM BAR ===================== */
     #bottom-bar {
-      background: rgba(0,0,0,var(--panel-alpha));
+      background: var(--panel-bg);
       display: -webkit-flex;
       display: flex;
       -webkit-flex-direction: column;
@@ -187,9 +187,9 @@
       align-items: center;
       min-width: 38px;
     }
-    .sum-icon { font-size: 20px; margin-bottom: 2px; }
-    .sum-cur  { color: #4CAF50; font-weight: 700; font-size: 16px; line-height: 1; }
-    .sum-acc  { color: #bbb; font-size: 12px; }
+    .sum-icon { font-size: 26px; margin-bottom: 2px; }
+    .sum-cur  { color: #4CAF50; font-weight: 700; font-size: 22px; line-height: 1; }
+    .sum-acc  { color: #bbb; font-size: 16px; }
     .sum-lbl  { color: #777; font-size: 10px; text-transform: uppercase; margin-top: 1px; }
 
     .sum-vsep {
@@ -224,7 +224,7 @@
     }
     .age-col-label {
       color: #4CAF50;
-      font-size: 12px;
+      font-size: 16px;
       font-weight: 700;
       margin-bottom: 3px;
       white-space: nowrap;
@@ -235,10 +235,10 @@
       -webkit-align-items: center;
       align-items: center;
       gap: 2px;
-      font-size: 12px;
+      font-size: 16px;
       white-space: nowrap;
     }
-    .age-row .r-icon { color: #aaa; width: 12px; text-align: center; font-size: 11px; }
+    .age-row .r-icon { color: #aaa; width: 14px; text-align: center; font-size: 14px; }
     .val-nz { color: #4CAF50; }
     .val-zr { color: #888; }
 
@@ -252,11 +252,11 @@
       -webkit-flex-shrink: 0;
       flex-shrink: 0;
     }
-    .attn-eye  { font-size: 18px; color: #aaa; }
+    .attn-eye  { font-size: 23px; color: #aaa; }
     .attn-item { display: -webkit-flex; display: flex; -webkit-flex-direction: column; flex-direction: column; -webkit-align-items: center; align-items: center; min-width: 34px; }
-    .attn-lbl  { color: #aaa; font-size: 13px; margin-bottom: 2px; }
-    .attn-cur  { color: #4CAF50; font-weight: 700; font-size: 13px; line-height: 1; }
-    .attn-acc  { color: #bbb; font-size: 11px; }
+    .attn-lbl  { color: #aaa; font-size: 17px; margin-bottom: 2px; }
+    .attn-cur  { color: #4CAF50; font-weight: 700; font-size: 18px; line-height: 1; }
+    .attn-acc  { color: #bbb; font-size: 15px; }
 
     /* Row 2 — Crossings */
     #crossings-section {
@@ -291,18 +291,18 @@
       -webkit-align-items: center;
       align-items: center;
       gap: 6px;
-      font-size: 12px;
+      font-size: 16px;
     }
 
     .cross-line-name { color: #ccc; white-space: nowrap; }
     .cross-in   { color: #4CAF50; font-weight: 600; }
     .cross-out  { color: #ef5350; font-weight: 600; }
-    .cross-arrow { color: #666; font-size: 11px; }
+    .cross-arrow { color: #666; font-size: 14px; }
 
     /* ===================== ZONES PANEL ===================== */
     #zones-panel {
       position: fixed;
-      background: rgba(10,14,20,var(--panel-alpha));
+      background: var(--panel-bg-dark);
       border: 1px solid rgba(76,175,80,0.35);
       border-radius: 8px;
       padding: 10px 12px;
@@ -329,10 +329,10 @@
 
     /* Zone info in row2 */
     #zone-info { display: flex; flex-direction: column; justify-content: center; flex-shrink: 0; padding: 0 4px; }
-    .zi-name   { color: #4CAF50; font-size: 11px; font-weight: 700; margin-bottom: 3px; }
+    .zi-name   { color: #4CAF50; font-size: 15px; font-weight: 700; margin-bottom: 3px; }
     .zi-counts { display: flex; gap: 8px; }
     .zi-item   { display: flex; flex-direction: column; align-items: center; min-width: 28px; }
-    .zi-icon   { font-size: 14px; color: #aaa; margin-bottom: 1px; }
+    .zi-icon   { font-size: 20px; color: #aaa; margin-bottom: 1px; }
 
     /* ===================== GEAR / REFRESH BUTTONS ===================== */
     #refresh-btn {
@@ -511,7 +511,7 @@
 
         <div id="summary-left">
           <div class="sum-item sum-total-main">
-            <span style="font-size:18px;color:#666;">&#128694;</span>
+            <span style="font-size:26px;color:#666;">&#128694;</span>
             <span id="sl-total-cur-pre" class="sum-cur">—</span>
             <span id="sl-total-acc-pre" class="sum-acc">/—</span>
           </div>
@@ -527,7 +527,7 @@
             <span id="sl-female-acc" class="sum-acc">/—</span>
           </div>
           <div class="sum-item">
-            <span class="sum-icon" style="font-size:18px;">&#128100;</span>
+            <span class="sum-icon" style="font-size:26px;">&#128100;</span>
             <span id="sl-unknown-cur" class="sum-cur">—</span>
             <span id="sl-unknown-acc" class="sum-acc">/—</span>
           </div>
@@ -879,8 +879,9 @@
     function renderBg(rawData, inferData) {
       if (cfg.showRaw) {
         var r = setImgSrc(document.getElementById('bg'), rawData, _lastRawLen, _lastRawTs, 'dbg-img-ts');
+        var changed = r[0] !== _lastRawLen || r[1] !== _lastRawTs;
         _lastRawLen = r[0]; _lastRawTs = r[1];
-        dbgSet('dbg-img-changed', r[0] !== _lastRawLen || r[1] !== _lastRawTs ? '✓ sí' : (rawData && rawData.image ? '✗ mismo frame' : '—'), 'warn');
+        dbgSet('dbg-img-changed', changed ? '✓ sí' : (rawData && rawData.image ? '✗ mismo frame' : '—'), changed ? 'ok' : 'warn');
       }
       if (cfg.showInference) {
         var i = setImgSrc(document.getElementById('bg-inference'), inferData, _lastInfLen, _lastInfTs, null);
@@ -962,7 +963,8 @@
 
     function applyOpacity() {
       var alpha = ((cfg.opacity !== undefined ? cfg.opacity : DEFAULTS.opacity) / 100).toFixed(2);
-      document.documentElement.style.setProperty('--panel-alpha', alpha);
+      document.documentElement.style.setProperty('--panel-bg',      'rgba(0,0,0,'     + alpha + ')');
+      document.documentElement.style.setProperty('--panel-bg-dark', 'rgba(10,14,20,'  + alpha + ')');
     }
 
 
