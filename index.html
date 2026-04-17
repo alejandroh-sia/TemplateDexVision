@@ -34,8 +34,7 @@
     body.dual-mode #bg,
     body.dual-mode #bg-inference {
       width: 50%;
-      object-fit: contain;
-      background: #000;
+      object-fit: cover;
     }
     body.dual-mode #bg          { left: 0; }
     body.dual-mode #bg-inference { display: block; left: 50%; }
@@ -858,8 +857,8 @@
     function applyImageMode() {
       var dual = cfg.showRaw && cfg.showInference;
       document.body.classList.toggle('dual-mode', dual);
-      document.getElementById('bg').style.display           = cfg.showRaw       ? '' : 'none';
-      document.getElementById('bg-inference').style.display = cfg.showInference ? (dual ? '' : '') : 'none';
+      document.getElementById('bg').style.display           = cfg.showRaw       ? 'block' : 'none';
+      document.getElementById('bg-inference').style.display = cfg.showInference ? 'block' : 'none';
     }
 
     function setImgSrc(el, data, lastLen, lastTs, dbgId) {
@@ -963,8 +962,16 @@
 
     function applyOpacity() {
       var alpha = ((cfg.opacity !== undefined ? cfg.opacity : DEFAULTS.opacity) / 100).toFixed(2);
-      document.documentElement.style.setProperty('--panel-bg',      'rgba(0,0,0,'     + alpha + ')');
-      document.documentElement.style.setProperty('--panel-bg-dark', 'rgba(10,14,20,'  + alpha + ')');
+      var bg     = 'rgba(0,0,0,'    + alpha + ')';
+      var bgDark = 'rgba(10,14,20,' + alpha + ')';
+      // Setear directo en los elementos (máxima compatibilidad con browsers embebidos)
+      var bb = document.getElementById('bottom-bar');
+      if (bb) bb.style.background = bg;
+      var zp = document.getElementById('zones-panel');
+      if (zp) zp.style.background = bgDark;
+      // CSS variable como fallback para elementos que se crean después (ej: zones-panel dinámico)
+      document.documentElement.style.setProperty('--panel-bg',      bg);
+      document.documentElement.style.setProperty('--panel-bg-dark', bgDark);
     }
 
 
