@@ -19,15 +19,26 @@
     }
 
     /* === BACKGROUND (camera feed) === */
-    #bg {
+    #bg, #bg-inference {
       position: absolute;
-      inset: 0;
-      width: 100%;
+      top: 0;
       height: 100%;
       object-fit: cover;
       object-position: center;
       z-index: 0;
     }
+    #bg { left: 0; width: 100%; }
+    #bg-inference { display: none; left: 0; width: 100%; }
+
+    /* Dual mode: side by side */
+    body.dual-mode #bg,
+    body.dual-mode #bg-inference {
+      width: 50%;
+      object-fit: contain;
+      background: #000;
+    }
+    body.dual-mode #bg          { left: 0; }
+    body.dual-mode #bg-inference { display: block; left: 50%; }
 
     /* === MAIN LAYOUT === */
     #layout {
@@ -422,6 +433,11 @@
     }
     .btn-cancel:hover { background: #3d3d3d; }
 
+    /* Checkboxes en config */
+    .cfg-check-row { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+    .cfg-check { display: flex; align-items: center; gap: 8px; color: #ccc; font-size: 13px; cursor: pointer; }
+    .cfg-check input[type=checkbox] { accent-color: #4CAF50; width: 14px; height: 14px; cursor: pointer; }
+
     /* ===================== STATUS DOT ===================== */
     #conn-dot {
       position: fixed; top: 7px; right: 7px;
@@ -471,6 +487,7 @@
 <body style="background-color: #111;">
 
   <img id="bg" alt="" />
+  <img id="bg-inference" alt="" />
   <div id="conn-dot" onclick="dbgToggle()" title="Click para debug"></div>
 
   <div id="layout">
@@ -614,6 +631,15 @@
       <div class="cfg-hint">0 = transparente, 100 = sólido. Aplica a barra inferior y panel de zonas.</div>
     </div>
 
+    <div class="cfg-field">
+      <label>Imagen de fondo</label>
+      <div class="cfg-check-row">
+        <label class="cfg-check"><input type="checkbox" id="c-show-raw"> Cámara (raw)</label>
+        <label class="cfg-check"><input type="checkbox" id="c-show-inference"> Con anotaciones (inference)</label>
+      </div>
+      <div class="cfg-hint">Activar ambas muestra las imágenes lado a lado.</div>
+    </div>
+
     <div class="cfg-actions">
       <button class="btn-save" onclick="cfgSave()">Guardar y aplicar</button>
       <button class="btn-cancel" onclick="cfgToggle()">Cancelar</button>
@@ -630,46 +656,56 @@
     // ============================================================
 
     // Dex Manager bindings (reemplazados en runtime por Dex Manager)
-    var BINDING_API_URL  = '{{apiUrl}}';
-    var BINDING_INTERVAL = '{{interval}}';
-    var BINDING_OPACITY  = '{{opacity}}';
+    var BINDING_API_URL       = '{{apiUrl}}';
+    var BINDING_INTERVAL      = '{{interval}}';
+    var BINDING_OPACITY       = '{{opacity}}';
+    var BINDING_SHOW_RAW      = '{{showRaw}}';
+    var BINDING_SHOW_INFERENCE= '{{showInference}}';
 
-    var DEFAULTS = { apiUrl: 'http://192.168.4.16:3000', interval: 5, panelX: 10, panelY: 80, opacity: 72 };
+    var DEFAULTS = { apiUrl: 'http://192.168.4.16:3000', interval: 5, panelX: 10, panelY: 80, opacity: 72, showRaw: true, showInference: false };
 
     // ---- Config ----
     function cfgLoad() {
       var saved = {};
       try { saved = JSON.parse(localStorage.getItem('dv_cfg') || '{}'); } catch(e) {}
       var c = Object.assign({}, DEFAULTS, saved);
-      if (BINDING_API_URL  && BINDING_API_URL.indexOf('{{')  === -1) c.apiUrl   = BINDING_API_URL;
-      if (BINDING_INTERVAL && BINDING_INTERVAL.indexOf('{{') === -1) c.interval = Math.max(1, parseInt(BINDING_INTERVAL) || DEFAULTS.interval);
-      if (BINDING_OPACITY  && BINDING_OPACITY.indexOf('{{')  === -1) c.opacity  = Math.min(100, Math.max(0, parseInt(BINDING_OPACITY) || DEFAULTS.opacity));
+      if (BINDING_API_URL        && BINDING_API_URL.indexOf('{{')        === -1) c.apiUrl       = BINDING_API_URL;
+      if (BINDING_INTERVAL       && BINDING_INTERVAL.indexOf('{{')       === -1) c.interval     = Math.max(1, parseInt(BINDING_INTERVAL) || DEFAULTS.interval);
+      if (BINDING_OPACITY        && BINDING_OPACITY.indexOf('{{')        === -1) c.opacity      = Math.min(100, Math.max(0, parseInt(BINDING_OPACITY) || DEFAULTS.opacity));
+      if (BINDING_SHOW_RAW       && BINDING_SHOW_RAW.indexOf('{{')       === -1) c.showRaw      = BINDING_SHOW_RAW === 'true' || BINDING_SHOW_RAW === true;
+      if (BINDING_SHOW_INFERENCE && BINDING_SHOW_INFERENCE.indexOf('{{') === -1) c.showInference= BINDING_SHOW_INFERENCE === 'true' || BINDING_SHOW_INFERENCE === true;
       return c;
     }
 
     var cfg = cfgLoad();
 
     // Apply panel position on load (after DOM ready)
-    document.addEventListener('DOMContentLoaded', function() { applyOpacity(); });
+    document.addEventListener('DOMContentLoaded', function() { applyOpacity(); applyImageMode(); });
 
     function cfgToggle() {
       var panel = document.getElementById('cfg-panel');
       var ov    = document.getElementById('cfg-overlay');
       if (!panel.classList.contains('open')) {
-        document.getElementById('c-url').value      = cfg.apiUrl;
-        document.getElementById('c-interval').value = cfg.interval;
-        document.getElementById('c-opacity').value  = cfg.opacity;
+        document.getElementById('c-url').value           = cfg.apiUrl;
+        document.getElementById('c-interval').value      = cfg.interval;
+        document.getElementById('c-opacity').value       = cfg.opacity;
+        document.getElementById('c-show-raw').checked      = cfg.showRaw;
+        document.getElementById('c-show-inference').checked = cfg.showInference;
       }
       panel.classList.toggle('open');
       ov.classList.toggle('open');
     }
 
     function cfgSave() {
-      cfg.apiUrl   = (document.getElementById('c-url').value.trim() || DEFAULTS.apiUrl).replace(/\/$/, '');
-      cfg.interval = Math.max(1, parseInt(document.getElementById('c-interval').value) || DEFAULTS.interval);
-      cfg.opacity  = Math.min(100, Math.max(0, parseInt(document.getElementById('c-opacity').value) || DEFAULTS.opacity));
+      cfg.apiUrl        = (document.getElementById('c-url').value.trim() || DEFAULTS.apiUrl).replace(/\/$/, '');
+      cfg.interval      = Math.max(1, parseInt(document.getElementById('c-interval').value) || DEFAULTS.interval);
+      cfg.opacity       = Math.min(100, Math.max(0, parseInt(document.getElementById('c-opacity').value) || DEFAULTS.opacity));
+      cfg.showRaw       = document.getElementById('c-show-raw').checked;
+      cfg.showInference = document.getElementById('c-show-inference').checked;
+      if (!cfg.showRaw && !cfg.showInference) cfg.showRaw = true; // al menos una activa
       try { localStorage.setItem('dv_cfg', JSON.stringify(cfg)); } catch(e) {}
       applyOpacity();
+      applyImageMode();
       cfgToggle();
       pollRestart();
     }
@@ -764,11 +800,14 @@
       setDot('loading');
       var now = new Date().toLocaleTimeString();
 
-      var rawP    = apiFetch('/stream/raw/latest');
+      var rawP = cfg.showRaw
+        ? apiFetch('/stream/raw/latest')
+        : Promise.resolve(null);
       var countsP = apiFetch('/stream/people-count/consolidated');
-      var inferP  = apiFetch('/stream/inference/latest')
+      var inferUrl = '/stream/inference/latest' + (cfg.showInference ? '?showImage=true' : '');
+      var inferP  = apiFetch(inferUrl)
         .then(function(d) {
-          var hasData = d && Object.keys(d).length > 1; // más que solo timestamp
+          var hasData = d && Object.keys(d).length > 1;
           dbgSet('dbg-inference', hasData ? '✓ OK' : '✓ 200 (sin datos)', hasData ? 'ok' : 'warn');
           return d;
         })
@@ -778,8 +817,8 @@
         });
 
       Promise.all([
-        rawP.then(function(d)    { dbgEndpoint('dbg-raw',    true);            return d; })
-            .catch(function(e)   { dbgEndpoint('dbg-raw',    false, e.message); throw e; }),
+        rawP.then(function(d)    { if (d) dbgEndpoint('dbg-raw', true); return d; })
+            .catch(function(e)   { dbgEndpoint('dbg-raw', false, e.message); throw e; }),
         countsP.then(function(d) { dbgEndpoint('dbg-counts', true);            return d; })
                .catch(function(e){ dbgEndpoint('dbg-counts', false, e.message); throw e; }),
         inferP
@@ -787,7 +826,7 @@
       .then(function(results) {
         dbgSet('dbg-time', now, 'ok');
         dbgSet('dbg-error', '—');
-        renderBg(results[0]);
+        renderBg(results[0], results[2]);
         renderCounts(results[1]);
         renderSystem(results[2]);
         setDot('ok');
@@ -811,25 +850,42 @@
     }
 
     // ============================================================
-    // RENDER — Background image
+    // RENDER — Background image(s)
     // ============================================================
-    var _lastImgLen = 0;
-    var _lastImgTs  = 0;
-    function renderBg(data) {
-      if (!data || !data.image) return;
+    var _lastRawLen = 0, _lastRawTs = 0;
+    var _lastInfLen = 0, _lastInfTs = 0;
+
+    function applyImageMode() {
+      var dual = cfg.showRaw && cfg.showInference;
+      document.body.classList.toggle('dual-mode', dual);
+      document.getElementById('bg').style.display           = cfg.showRaw       ? '' : 'none';
+      document.getElementById('bg-inference').style.display = cfg.showInference ? (dual ? '' : '') : 'none';
+    }
+
+    function setImgSrc(el, data, lastLen, lastTs, dbgId) {
+      if (!data || !data.image) return [lastLen, lastTs];
       var s  = String(data.image);
       var ts = data.timestamp || 0;
-      var tsStr = ts ? new Date(ts).toLocaleTimeString() + ' (' + ts + ')' : '—';
-      dbgSet('dbg-img-ts', tsStr);
-
-      var changed = s.length !== _lastImgLen || ts !== _lastImgTs;
-      dbgSet('dbg-img-changed', changed ? '✓ sí' : '✗ mismo frame', changed ? 'ok' : 'warn');
-
-      if (!changed) return;
-      _lastImgLen = s.length;
-      _lastImgTs  = ts;
+      if (dbgId) {
+        var tsStr = ts ? new Date(ts).toLocaleTimeString() + ' (' + ts + ')' : '—';
+        dbgSet(dbgId, tsStr);
+      }
+      if (s.length === lastLen && ts === lastTs) return [lastLen, lastTs];
       var src = s.indexOf('data:') === 0 ? s : 'data:image/jpeg;base64,' + s;
-      document.getElementById('bg').src = src;
+      el.src = src;
+      return [s.length, ts];
+    }
+
+    function renderBg(rawData, inferData) {
+      if (cfg.showRaw) {
+        var r = setImgSrc(document.getElementById('bg'), rawData, _lastRawLen, _lastRawTs, 'dbg-img-ts');
+        _lastRawLen = r[0]; _lastRawTs = r[1];
+        dbgSet('dbg-img-changed', r[0] !== _lastRawLen || r[1] !== _lastRawTs ? '✓ sí' : (rawData && rawData.image ? '✗ mismo frame' : '—'), 'warn');
+      }
+      if (cfg.showInference) {
+        var i = setImgSrc(document.getElementById('bg-inference'), inferData, _lastInfLen, _lastInfTs, null);
+        _lastInfLen = i[0]; _lastInfTs = i[1];
+      }
     }
 
     // ============================================================
