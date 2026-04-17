@@ -48,6 +48,28 @@
       "rules": {
         "required": false
       }
+    },
+    {
+      "id": "showRaw",
+      "name": "Mostrar imagen de cámara (raw)",
+      "description": "Muestra el feed crudo de la cámara como fondo.",
+      "type": "String",
+      "value": "true",
+      "hidden": false,
+      "rules": {
+        "required": false
+      }
+    },
+    {
+      "id": "showInference",
+      "name": "Mostrar imagen con anotaciones (inference)",
+      "description": "Muestra el frame procesado con bounding boxes. Si ambas están activas, se ven lado a lado.",
+      "type": "String",
+      "value": "false",
+      "hidden": false,
+      "rules": {
+        "required": false
+      }
     }
   ]
 }
