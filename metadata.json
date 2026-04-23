@@ -14,17 +14,28 @@
   },
   "bindings": [
     {
-      "id": "apiUrl",
-      "name": "URL de la API",
-      "description": "URL base de la API DexVision. Ej: http://192.168.4.16:3000 o http://localhost:3000",
-      "type": "Url",
-      "value": "http://192.168.4.16:3000",
+      "id": "apiHost",
+      "name": "IP / Host de la API",
+      "description": "Dirección IP o hostname del servidor DexVision. Ej: 192.168.4.16",
+      "type": "String",
+      "value": "192.168.4.16",
       "hidden": false,
       "rules": {
         "required": true,
         "messages": {
-          "required": "La URL de la API es requerida"
+          "required": "La IP o host de la API es requerida"
         }
+      }
+    },
+    {
+      "id": "apiPort",
+      "name": "Puerto de la API",
+      "description": "Puerto del servidor DexVision. Ej: 3000",
+      "type": "String",
+      "value": "3000",
+      "hidden": false,
+      "rules": {
+        "required": false
       }
     },
     {

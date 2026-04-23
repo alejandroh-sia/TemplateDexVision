@@ -672,7 +672,8 @@
     // ============================================================
 
     // Dex Manager bindings (reemplazados en runtime por Dex Manager)
-    var BINDING_API_URL       = '{{apiUrl}}';
+    var BINDING_API_HOST      = '{{apiHost}}';
+    var BINDING_API_PORT      = '{{apiPort}}';
     var BINDING_INTERVAL      = '{{interval}}';
     var BINDING_OPACITY       = '{{opacity}}';
     var BINDING_SHOW_RAW      = '{{showRaw}}';
@@ -693,7 +694,10 @@
       var saved = {};
       try { saved = JSON.parse(localStorage.getItem('dv_cfg') || '{}'); } catch(e) {}
       var c = Object.assign({}, DEFAULTS, saved);
-      if (BINDING_API_URL        && BINDING_API_URL.indexOf('{{')        === -1) c.apiUrl       = BINDING_API_URL;
+      if (BINDING_API_HOST && BINDING_API_HOST.indexOf('{{') === -1) {
+        var bPort = (BINDING_API_PORT && BINDING_API_PORT.indexOf('{{') === -1) ? BINDING_API_PORT : '3000';
+        c.apiUrl = buildApiUrl(BINDING_API_HOST, bPort);
+      }
       if (BINDING_INTERVAL       && BINDING_INTERVAL.indexOf('{{')       === -1) c.interval     = Math.max(1, parseInt(BINDING_INTERVAL) || DEFAULTS.interval);
       if (BINDING_OPACITY        && BINDING_OPACITY.indexOf('{{')        === -1) c.opacity      = Math.min(100, Math.max(0, parseInt(BINDING_OPACITY) || DEFAULTS.opacity));
       if (BINDING_SHOW_RAW       && BINDING_SHOW_RAW.indexOf('{{')       === -1) c.showRaw      = BINDING_SHOW_RAW === 'true' || BINDING_SHOW_RAW === true;
