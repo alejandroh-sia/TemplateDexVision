@@ -415,8 +415,17 @@
     .cfg-field input {
       width: 100%; background: #2a2a2a; border: 1px solid #444;
       color: #fff; padding: 7px 10px; font-size: 13px; outline: none;
+      box-sizing: border-box;
     }
     .cfg-field input:focus { border-color: #4CAF50; }
+    .cfg-ip-row { display: -webkit-flex; display: flex; gap: 8px; }
+    .cfg-ip-row .cfg-sub { display: -webkit-flex; display: flex; flex-direction: column; }
+    .cfg-ip-row .cfg-sub-host { -webkit-flex: 1; flex: 1; }
+    .cfg-ip-row .cfg-sub-port { width: 80px; }
+    .cfg-ip-row .cfg-sub label {
+      display: block; color: #aaa; font-size: 11px;
+      margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;
+    }
     .cfg-hint { font-size: 10px; color: #555; margin-top: 3px; }
 
     .cfg-actions { display: -webkit-flex; display: flex; gap: 8px; margin-top: 20px; }
@@ -614,9 +623,17 @@
     <div class="cfg-title">&#9881; Configuración DexVision</div>
 
     <div class="cfg-field">
-      <label>URL de la API</label>
-      <input id="c-url" type="text" placeholder="http://192.168.4.16:3000" />
-      <div class="cfg-hint">Ej: http://192.168.4.16:3000 &nbsp;|&nbsp; http://localhost:3000</div>
+      <label>API</label>
+      <div class="cfg-ip-row">
+        <div class="cfg-sub cfg-sub-host">
+          <label>IP / Host</label>
+          <input id="c-host" type="text" placeholder="192.168.4.16" />
+        </div>
+        <div class="cfg-sub cfg-sub-port">
+          <label>Puerto</label>
+          <input id="c-port" type="number" min="1" max="65535" placeholder="3000" />
+        </div>
+      </div>
     </div>
 
     <div class="cfg-field">
@@ -663,6 +680,14 @@
 
     var DEFAULTS = { apiUrl: 'http://192.168.4.16:3000', interval: 5, panelX: 10, panelY: 80, opacity: 72, showRaw: true, showInference: false };
 
+    function parseApiUrl(url) {
+      var m = (url || '').replace(/\/$/, '').match(/^https?:\/\/([^:]+)(?::(\d+))?$/);
+      return m ? { host: m[1], port: m[2] || '3000' } : { host: '192.168.4.16', port: '3000' };
+    }
+    function buildApiUrl(host, port) {
+      return 'http://' + (host || '192.168.4.16') + ':' + (port || '3000');
+    }
+
     // ---- Config ----
     function cfgLoad() {
       var saved = {};
@@ -685,7 +710,9 @@
       var panel = document.getElementById('cfg-panel');
       var ov    = document.getElementById('cfg-overlay');
       if (!panel.classList.contains('open')) {
-        document.getElementById('c-url').value           = cfg.apiUrl;
+        var parsed = parseApiUrl(cfg.apiUrl);
+        document.getElementById('c-host').value          = parsed.host;
+        document.getElementById('c-port').value          = parsed.port;
         document.getElementById('c-interval').value      = cfg.interval;
         document.getElementById('c-opacity').value       = cfg.opacity;
         document.getElementById('c-show-raw').checked      = cfg.showRaw;
@@ -696,7 +723,9 @@
     }
 
     function cfgSave() {
-      cfg.apiUrl        = (document.getElementById('c-url').value.trim() || DEFAULTS.apiUrl).replace(/\/$/, '');
+      var host = document.getElementById('c-host').value.trim();
+      var port = document.getElementById('c-port').value.trim();
+      cfg.apiUrl        = host ? buildApiUrl(host, port || '3000') : DEFAULTS.apiUrl;
       cfg.interval      = Math.max(1, parseInt(document.getElementById('c-interval').value) || DEFAULTS.interval);
       cfg.opacity       = Math.min(100, Math.max(0, parseInt(document.getElementById('c-opacity').value) || DEFAULTS.opacity));
       cfg.showRaw       = document.getElementById('c-show-raw').checked;
@@ -705,6 +734,8 @@
       try { localStorage.setItem('dv_cfg', JSON.stringify(cfg)); } catch(e) {}
       applyOpacity();
       applyImageMode();
+      dbgRefresh();
+      clearImages();
       cfgToggle();
       pollRestart();
     }
@@ -838,6 +869,7 @@
         dbgSet('dbg-error', e.message, 'err');
         console.error('[DexVision]', e);
         setDot('err');
+        clearImages();
         toast('⚠ ' + e.message + ' — Click en el punto rojo para debug', true);
         if (!dbgVisible) {
           // Abrir panel automáticamente en el primer error
@@ -853,6 +885,15 @@
     // ============================================================
     var _lastRawLen = 0, _lastRawTs = 0;
     var _lastInfLen = 0, _lastInfTs = 0;
+
+    function clearImages() {
+      var bgEl  = document.getElementById('bg');
+      var infEl = document.getElementById('bg-inference');
+      if (bgEl)  bgEl.src  = '';
+      if (infEl) infEl.src = '';
+      _lastRawLen = 0; _lastRawTs = 0;
+      _lastInfLen = 0; _lastInfTs = 0;
+    }
 
     function applyImageMode() {
       var dual = cfg.showRaw && cfg.showInference;
