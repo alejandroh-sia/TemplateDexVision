@@ -3,7 +3,7 @@
   "name": "DexVision Analytics",
   "description": "Dashboard de analytics de video con detección de personas en tiempo real. Muestra conteos por género, grupos etarios y feed de cámara en vivo.",
   "icon": "icon.png",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "preview": ["preview.jpg"],
   "tags": ["analytics", "people counting", "AI", "video", "security", "dexvision", "camera"],
   "properties": {
